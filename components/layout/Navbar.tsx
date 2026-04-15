@@ -1,5 +1,6 @@
+'use client'
 import Link from "next/link";
-
+import { useState } from "react";
 const navLinks = [
   { href: "/", label: "首頁" },
   { href: "/blog", label: "文章" },
@@ -7,6 +8,8 @@ const navLinks = [
 ];
 
 export default function Navbar() {
+  const [hamburgerOpen, setHamburgerOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-gray-100">
       <nav className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -44,7 +47,28 @@ export default function Navbar() {
           >
             註冊
           </Link>
+          <button 
+            className="md:hidden" 
+            onClick={() => setHamburgerOpen((prev) => !prev)} 
+          >
+            {hamburgerOpen ? "關閉":"選單"}
+          </button>
         </div>
+
+        {hamburgerOpen && (
+          <div className="md:hidden absolute top-16 left-0 right-0 bg-white border-b border-gray-100">
+            {navLinks.map((link)=>(
+              <Link
+                key={link.href}
+                href={link.href}
+                className="px-3 py-2 rounded-lg text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        )}
+
       </nav>
     </header>
   );

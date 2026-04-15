@@ -7,7 +7,7 @@
 - 建立基本路由結構
 - 完成所有 Day 1 練習挑戰
 
-### ✅ Day 2 完成（2026-04-14）
+### 🔄 Day 2 進行中（2026-04-15）
 **學習內容：**
 - Props 與 Interface 深度解析
 - 物件 State 管理
@@ -19,10 +19,12 @@
 - ✅ UI 元件系統
   - `components/ui/Button.tsx` - 完整按鈕元件（支援 variant, size, loading）
   - `components/ui/Badge.tsx` - 標籤元件（多色系統）
+  - `components/ui/Avatar.tsx` - 頭像元件（圖片或首字母顯示）
+  - `components/ui/card.tsx` - Card 容器元件（支援 padding 大小）
 - ✅ Layout 元件
-  - `components/layout/Navbar.tsx` - 導覽列（響應式設計）
+  - `components/layout/Navbar.tsx` - 導覽列（響應式 + 手機漢堡選單）
 - ✅ Blog 元件
-  - `components/blog/PostCard.tsx` - 文章卡片元件
+  - `components/blog/PostCard.tsx` - 文章卡片元件（含閱讀時間估算）
 - ✅ 頁面路由
   - `/` - 首頁
   - `/blog` - 文章列表
@@ -32,17 +34,30 @@
   - `/dashboard` - 儀表板
   - `/tags` - 標籤頁面
 
+**練習挑戰進度：**
+- ✅ 練習 1：useState — Navbar 手機選單開關
+- 🔄 練習 2：useMemo — 文章標籤篩選（進行中）
+- ⏳ 練習 3：useCallback — 搜尋輸入元件
+
 **學習筆記：**
 - `SKD/Day2-筆記-Props與State.md`
 - `SKD/Day2-筆記-useEffect.md`
 - `SKD/Day2-筆記-進階Hooks與TypeScript.md`
+- `SKD/Day2-練習挑戰.md`
 
 ---
 
 ## 最近異動
 
+**2026-04-15**
+- Navbar 加入手機版漢堡選單（useState 練習）
+- 新增 Avatar、Card 元件
+- PostCard 加入閱讀時間估算功能
+- 新增 Day 2 練習挑戰筆記（SKD/Day2-練習挑戰.md）
+- 新增進階 Hooks 與 TypeScript 學習筆記
+
 **2026-04-14**
-- 完成 Day 2 所有實作內容
+- 完成 Day 2 核心實作內容
 - 建立完整的元件系統（Button, Badge, Navbar, PostCard）
 - 建立基本路由結構（7 個頁面）
 - 建立 Day 2 學習筆記（3 份）
@@ -89,13 +104,18 @@ my-blog/
 ├── components/            # React 元件
 │   ├── ui/               # 基礎 UI 元件
 │   │   ├── Button.tsx
-│   │   └── Badge.tsx
+│   │   ├── Badge.tsx
+│   │   ├── Avatar.tsx
+│   │   └── card.tsx
 │   ├── layout/           # 佈局元件
 │   │   └── Navbar.tsx
 │   └── blog/             # 部落格相關元件
 │       └── PostCard.tsx
 └── SKD/                  # 學習筆記
-    └── Day2-筆記-*.md
+    ├── Day2-筆記-Props與State.md
+    ├── Day2-筆記-useEffect.md
+    ├── Day2-筆記-進階Hooks與TypeScript.md
+    └── Day2-練習挑戰.md
 ```
 
 ---
