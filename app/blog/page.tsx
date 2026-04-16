@@ -1,4 +1,6 @@
-import { useState } from "react";
+'use client'
+import { useMemo, useState } from "react";
+import PostCard from "@/components/blog/PostCard";
 
 const MOCK_POSTS = [
     { id: '1', title: 'Next.js App Router 完全指南', slug:                
@@ -21,10 +23,30 @@ const MOCK_POSTS = [
   image: null }, _count: { comments: 2 } },                               
 ];
 
-const [selectedTag, setSelectedTag] = useState('');
-
-
-
 export default function BlogPage() {
-  return <h1 className="p-8 text-3xl font-bold">文章列表 (施工中) </h1>;
+  // return <h1 className="p-8 text-3xl font-bold">文章列表 (施工中) </h1>;
+  const [selectedTag, setSelectedTag] = useState('');
+  const filteredPosts = useMemo(()=>{
+    return MOCK_POSTS.filter(post => selectedTag ? post.tags.some(tag => tag.name === selectedTag) : true);
+  },[selectedTag]);
+
+  return (
+    <div>
+      <h1>文章列表</h1>
+      {/* 標籤篩選按鈕 */}
+      <div className="flex gap-2 mb-6">
+        {/* 「全部」按鈕 */}
+        <button onClick={() => {
+          console.log("點到全部了")
+          setSelectedTag('')
+        }}>全部</button>
+        {MOCK_POSTS.flatMap(post => post.tags).filter((tag, index, self) => self.findIndex(t => t.name === tag.name) === index).map(tag=>(
+          <button key={tag.id} onClick={() => setSelectedTag(tag.name)}>{tag.name}</button>
+        ))}
+        
+      </div>
+      {/* 文章列表 */}
+      { filteredPosts.map(p => (<PostCard key={p.id} post={p}/>) )}
+    </div>
+  )
 }

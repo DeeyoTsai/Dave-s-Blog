@@ -40,10 +40,49 @@
 
 **關鍵觀念：**
 - state 只需要一個：`selectedTag`，初始值為空字串 `''`（代表「全部」）
-- `useMemo` 依賴：`[MOCK_POSTS, selectedTag]`
+- `useMemo` 依賴：`[selectedTag]`（MOCK_POSTS 是模組層常數，不需要列入）
 - 篩選邏輯：`selectedTag` 為空 → 回傳全部；有值 → 用 `.filter()` + `.some()` 篩選
 - 標籤清單從資料動態產生：`MOCK_POSTS.flatMap(p => p.tags)` 再去重複
 - 為什麼用 `useMemo` 而不是 `useState + useEffect`：避免多一次渲染，衍生值直接在渲染時計算
+- Hook 必須在元件函式**內部**呼叫，不能放在元件外（模組層）
+
+**完整實作：**
+```tsx
+'use client'
+import { useMemo, useState } from "react"
+import PostCard from "@/components/blog/PostCard"
+
+const MOCK_POSTS = [ ... ]  // 模組層常數，元件外定義沒問題
+
+export default function BlogPage() {
+  const [selectedTag, setSelectedTag] = useState('')
+
+  const filteredPosts = useMemo(() => {
+    return MOCK_POSTS.filter(post =>
+      selectedTag ? post.tags.some(tag => tag.name === selectedTag) : true
+    )
+  }, [selectedTag])
+
+  return (
+    <div>
+      <div className="flex gap-2 mb-6">
+        <button onClick={() => setSelectedTag('')}>全部</button>
+        {MOCK_POSTS
+          .flatMap(post => post.tags)
+          .filter((tag, index, self) =>
+            self.findIndex(t => t.name === tag.name) === index
+          )
+          .map(tag => (
+            <button key={tag.id} onClick={() => setSelectedTag(tag.name)}>
+              {tag.name}
+            </button>
+          ))}
+      </div>
+      {filteredPosts.map(p => <PostCard key={p.id} post={p} />)}
+    </div>
+  )
+}
+```
 
 **`.some()` 用法：**
 ```tsx
@@ -53,11 +92,17 @@ post.tags.some(tag => tag.name === selectedTag)
 
 **去重複標籤：**
 ```tsx
-// flatMap 展開所有文章的 tags，再用 Map 去重複
-const allTags = MOCK_POSTS
-  .flatMap(post => post.tags)
-  .filter((tag, index, self) => self.findIndex(t => t.name === tag.name) === index)
+.filter((tag, index, self) => self.findIndex(t => t.name === tag.name) === index)
+// findIndex 回傳「第一次出現這個 name 的位置」
+// 若等於目前的 index → 第一次出現 → 保留
+// 若不等於 → 重複 → 過濾掉
 ```
+
+**踩過的坑：**
+- ❌ `useState` / `useMemo` 寫在元件外面 → React 報錯「Hook cannot be called at top level」
+- ❌ `filter` callback 的 false 分支回傳 `MOCK_POSTS`（陣列）而非 `true` → 邏輯錯誤但偶然能跑
+- ❌ 去重複用 `self.indexOf(tag)` → 物件參考比較，永遠無法去重複
+- ❌ 去重複用 `self.findIndex(...)` 但沒加 `=== index` → findIndex 回傳數字，index=0 時為 falsy，第一個標籤被錯誤過濾
 
 ---
 
@@ -104,5 +149,5 @@ interface SearchInputProps {
 | 練習 | 檔案 | 狀態 |
 |------|------|------|
 | useState — 手機選單 | `components/layout/Navbar.tsx` | ✅ 完成 |
-| useMemo — 標籤篩選 | `app/blog/page.tsx` | 🔄 進行中 |
+| useMemo — 標籤篩選 | `app/blog/page.tsx` | 🔄 實作完成，除錯中 |
 | useCallback — 搜尋元件 | `components/ui/SearchInput.tsx` | ⏳ 待開始 |
