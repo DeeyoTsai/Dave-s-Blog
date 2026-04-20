@@ -890,48 +890,136 @@ app/_components/          → 底線開頭，完全忽略
 
 ### 2. 動態路由的 generateStaticParams
 
-```tsx
-// app/blog/[slug]/page.tsx
+#### 先理解背景：SSG vs SSR
 
-// 在 Build 時告訴 Next.js 所有可能的 slug
-// → Next.js 會預先產生這些頁面（SSG）
+Next.js 有兩種渲染策略：
+
+**SSR（每次請求才產生頁面）**
+```
+使用者訪問 /blog/nextjs-tips
+→ 伺服器當場去查資料庫
+→ 產生 HTML 回傳
+→ 每次都要等
+```
+
+**SSG（Build 時預先產生好靜態頁面）**
+```
+npm run build 時
+→ 伺服器預先產生 /blog/nextjs-tips、/blog/typescript-guide...
+→ 部署後是靜態 HTML 檔案
+→ 使用者訪問時直接回傳，超快
+```
+
+`generateStaticParams` 就是告訴 Next.js：**「Build 的時候，幫我預先產生這些頁面」**
+
+#### 動態路由的問題
+
+```
+app/blog/[slug]/page.tsx  →  /blog/任意字串
+```
+
+`[slug]` 是變數，Next.js 不知道有哪些可能的值，要明確告訴它：
+
+```tsx
 export async function generateStaticParams() {
-  // 之後會從資料庫取得
+  // 回傳格式必須是 [{ slug: "xxx" }, { slug: "yyy" }]
+  return [
+    { slug: "nextjs-tips" },
+    { slug: "typescript-guide" },
+    { slug: "react-hooks" },
+  ]
+}
+// Build 時 Next.js 就會預先產生：
+// /blog/nextjs-tips、/blog/typescript-guide、/blog/react-hooks
+```
+
+#### 實際專案寫法（接資料庫）
+
+```tsx
+export async function generateStaticParams() {
+  // 從資料庫撈所有已發佈文章的 slug
   const posts = await prisma.post.findMany({
     where: { published: true },
-    select: { slug: true },
+    select: { slug: true },   // 只取 slug，節省效能
   })
   return posts.map(post => ({ slug: post.slug }))
 }
+```
 
-// 動態生成 SEO meta
-export async function generateMetadata({ params }: Props) {
+#### 搭配 generateMetadata 完整範例
+
+```tsx
+// app/blog/[slug]/page.tsx
+
+// 1. 告訴 Next.js Build 哪些頁面
+export async function generateStaticParams() {
+  const posts = await prisma.post.findMany({ select: { slug: true } })
+  return posts.map(p => ({ slug: p.slug }))
+}
+
+// 2. 每個頁面動態產生不同的 <title> 和 og:image
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const post = await getPostBySlug(slug)
   if (!post) return {}
   return {
-    title: post.title,
+    title: post.title,           // → <title>Next.js 完全指南</title>
     description: post.excerpt,
     openGraph: { title: post.title, description: post.excerpt ?? '' },
   }
 }
+
+// 3. 頁面本體
+export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const post = await getPostBySlug(slug)
+  return <article>{post.content}</article>
+}
 ```
+
+#### 有沒有 generateStaticParams 的差異
+
+| | 有 generateStaticParams | 沒有 |
+|---|---|---|
+| 渲染時機 | Build 時預先產生 | 第一次請求時才產生 |
+| 速度 | 極快（靜態 HTML） | 較慢（等伺服器運算） |
+| 適合 | 文章詳情頁（內容不常變） | 即時資料頁面 |
+
+> Day 6 接上 Prisma 後，部落格文章頁就會用這個方式實作。Day 3 先用假資料理解概念即可。
 
 ### 3. URL SearchParams（搜尋/篩選功能）
 
-```tsx
-// 搜尋參數在 URL 中：/blog?q=nextjs&tag=frontend&page=2
-// Server Component 可以直接讀取 searchParams
+#### 什麼是 SearchParams？
 
-interface BlogPageProps {
+就是 URL 問號後面的東西：
+
+```
+/blog?q=nextjs&tag=前端&page=2
+       ↑            ↑         ↑
+     搜尋關鍵字    標籤篩選   第幾頁
+```
+
+好處：
+- 可以直接分享連結（別人開同一個 URL 看到一樣的結果）
+- 瀏覽器上一頁/下一頁都能回到正確狀態
+- SEO 友好（搜尋引擎可以索引篩選結果）
+
+#### Server Component 讀法（推薦）
+
+```tsx
+// app/(blog)/blog/page.tsx
+// 這是 Server Component，不需要 useState
+
+interface Props {
   searchParams: Promise<{ q?: string; tag?: string; page?: string }>
+  //                      ↑ 都是可選的，不一定有值
 }
 
-export default async function BlogPage({ searchParams }: BlogPageProps) {
+export default async function BlogPage({ searchParams }: Props) {
   const { q = '', tag, page = '1' } = await searchParams
-  const currentPage = parseInt(page)
+  //           ↑ 沒傳就預設空字串
 
-  // 根據 searchParams 查詢資料庫
+  // 直接用這些值查資料庫，不需要 useState！
   const posts = await prisma.post.findMany({
     where: {
       published: true,
@@ -943,7 +1031,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
       }),
       ...(tag && { tags: { some: { name: tag } } }),
     },
-    skip: (currentPage - 1) * 10,
+    skip: (parseInt(page) - 1) * 10,
     take: 10,
   })
 
@@ -955,6 +1043,86 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
   )
 }
 ```
+
+#### Client Component 讀法（SearchBar 用這個）
+
+```tsx
+'use client'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+
+export default function SearchBar() {
+  const router = useRouter()
+  const pathname = usePathname()          // 目前路徑：/blog
+  const searchParams = useSearchParams()  // 目前的 query string
+
+  const handleSearch = (term: string) => {
+    // 複製現有的 query string（保留 tag 等其他參數）
+    const params = new URLSearchParams(searchParams.toString())
+
+    if (term) {
+      params.set('q', term)   // 有值就設定
+    } else {
+      params.delete('q')      // 空字串就刪掉
+    }
+    params.delete('page')     // 搜尋時重置頁碼
+
+    // 更新 URL，觸發 Server Component 重新抓資料
+    router.push(`${pathname}?${params.toString()}`)
+    // 結果：/blog?q=nextjs（保留了 tag 參數）
+  }
+
+  return <input onChange={e => handleSearch(e.target.value)} />
+}
+```
+
+#### 為什麼要用 Suspense 包 SearchBar？
+
+```tsx
+// app/(blog)/blog/page.tsx（Server Component）
+import { Suspense } from 'react'
+
+export default async function BlogPage() {
+  return (
+    <div>
+      {/* SearchBar 用了 useSearchParams()，需要 Suspense */}
+      <Suspense fallback={<div className="h-12 bg-gray-100 rounded-xl animate-pulse" />}>
+        <SearchBar />
+      </Suspense>
+    </div>
+  )
+}
+```
+
+原因：`useSearchParams()` 在 SSR 階段（伺服器端）還不知道瀏覽器的 URL，會造成 hydration 錯誤。用 `Suspense` 包起來，告訴 Next.js「這塊等到瀏覽器端再渲染」。
+
+#### 整體資料流
+
+```
+使用者在搜尋框輸入 "nextjs"
+        ↓
+SearchBar（Client）呼叫 router.push('/blog?q=nextjs')
+        ↓
+URL 更新 → Next.js 重新執行 Server Component
+        ↓
+BlogPage（Server）讀取 searchParams.q = "nextjs"
+        ↓
+用 "nextjs" 查資料庫，回傳符合的文章
+        ↓
+頁面更新（只有文章列表部分，不是整頁重整）
+```
+
+#### Day 2 寫法 vs Day 3 新版本對比
+
+| | Day 2 寫法 | Day 3 寫法 |
+|---|---|---|
+| Component 類型 | Client（`"use client"`） | Server Component |
+| 狀態管理 | `useState` | URL searchParams |
+| 搜尋觸發 | `onChange` 改 state | `onChange` 改 URL |
+| 可分享連結 | 否（state 不在 URL） | 是 |
+| SEO | 較差 | 較好 |
+| JS bundle | 較大 | 較小 |
+
+> Day 2 的寫法沒有錯，Day 3 是更貼近 Next.js 設計理念的做法。
 
 ### 4. useRouter vs Link vs redirect
 
