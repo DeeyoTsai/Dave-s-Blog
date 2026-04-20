@@ -1095,6 +1095,95 @@ export default async function BlogPage() {
 
 原因：`useSearchParams()` 在 SSR 階段（伺服器端）還不知道瀏覽器的 URL，會造成 hydration 錯誤。用 `Suspense` 包起來，告訴 Next.js「這塊等到瀏覽器端再渲染」。
 
+---
+
+#### Suspense 完整解析
+
+**背景：React 的渲染問題**
+
+想像一個頁面有三個區塊，其中一個需要等資料：
+
+```
+┌─────────────────┐
+│   標題（快）     │  ← 立刻就能顯示
+├─────────────────┤
+│   文章列表（慢） │  ← 要等資料庫回應（可能 2 秒）
+├─────────────────┤
+│   側欄（快）     │  ← 立刻就能顯示
+└─────────────────┘
+```
+
+- **沒有 Suspense：** 整個頁面都卡住，等最慢的那個完成，才一起顯示。
+- **有 Suspense：** 快的部分先顯示，慢的地方先給 `fallback`（骨架屏），等資料到了再換上真實內容。
+
+```tsx
+<Suspense fallback={<骨架屏 />}>
+  <慢元件 />   {/* 等待資料時顯示 fallback，資料好了換成真實內容 */}
+</Suspense>
+```
+
+**問題的根源：SSR 與瀏覽器的資訊不對稱**
+
+```
+伺服器渲染 HTML 時：
+  → 伺服器不知道用戶瀏覽器的 URL 是什麼
+  → useSearchParams() 在伺服器端回傳空值
+
+瀏覽器收到 HTML 後（Hydration）：
+  → 瀏覽器知道 URL，useSearchParams() 回傳真實值
+  → 但這和伺服器給的 HTML 不一樣 → Hydration Mismatch → 崩潰！
+```
+
+加上 `Suspense` 等於告訴 Next.js：「這個元件你不用在伺服器渲染，先給 fallback，等瀏覽器接手後再渲染。」這樣就不存在伺服器 vs 瀏覽器資訊不一致的問題了。
+
+**Suspense 的三種常見使用情境**
+
+情境 1：包住有 `useSearchParams()` 的 Client Component（今天的案例）
+
+```tsx
+<Suspense fallback={<SearchBarSkeleton />}>
+  <SearchBar />
+</Suspense>
+```
+
+情境 2：包住需要等待資料的 Server Component（最常見）
+
+```tsx
+// 頁面框架先顯示，文章列表等資料好了再換上
+export default function BlogPage() {
+  return (
+    <div>
+      <h1>所有文章</h1>
+      <Suspense fallback={<PostListSkeleton />}>
+        <PostList />   {/* 這個元件內部 await fetch，需要等待 */}
+      </Suspense>
+    </div>
+  )
+}
+```
+
+情境 3：多個區塊各自獨立載入，不互相等待
+
+```tsx
+export default function DashboardPage() {
+  return (
+    <div className="grid grid-cols-2 gap-6">
+      <Suspense fallback={<Skeleton />}>
+        <UserStats />      {/* 這個先好先顯示 */}
+      </Suspense>
+      <Suspense fallback={<Skeleton />}>
+        <RecentPosts />    {/* 不用等 UserStats，各自獨立 */}
+      </Suspense>
+      <Suspense fallback={<Skeleton />}>
+        <ActivityLog />    {/* 同上 */}
+      </Suspense>
+    </div>
+  )
+}
+```
+
+沒有 Suspense 的話，這三個區塊會等最慢的那個，一起顯示。
+
 #### 整體資料流
 
 ```
@@ -1122,7 +1211,45 @@ BlogPage（Server）讀取 searchParams.q = "nextjs"
 | SEO | 較差 | 較好 |
 | JS bundle | 較大 | 較小 |
 
-> Day 2 的寫法沒有錯，Day 3 是更貼近 Next.js 設計理念的做法。
+**用情境理解差異：你在 `/blog` 搜尋了「nextjs」，把網址複製給朋友。**
+
+Day 2（useState）的 URL 永遠是：
+```
+/blog         ← 不管你搜什麼，URL 都不變
+```
+朋友收到後看到的是全部文章，不是你搜尋的結果。按「上一頁」，搜尋框清空，無法回到剛才的狀態。搜尋狀態只活在這個 Tab 的記憶體，關掉就消失。
+
+Day 3（URL SearchParams）的 URL 會變成：
+```
+/blog?q=nextjs   ← URL 跟著搜尋內容變化
+```
+朋友收到後看到一樣的搜尋結果。按「上一頁」回到 `/blog`，頁面正確回到未搜尋狀態。搜尋狀態活在 URL，複製貼上就能重現一模一樣的頁面。
+
+**程式碼結構對比：**
+
+```tsx
+// Day 2：整頁是 Client Component，狀態存 state
+'use client'
+export default function BlogPage() {
+  const [searchTerm, setSearchTerm] = useState('')
+  const filtered = useMemo(() => posts.filter(p => p.title.includes(searchTerm)), [searchTerm])
+  return <input onChange={e => setSearchTerm(e.target.value)} />
+}
+
+// Day 3：BlogPage 是 Server Component，狀態存 URL
+// SearchBar（Client）只負責更新 URL
+export default async function BlogPage({ searchParams }) {
+  const { q = '' } = await searchParams   // 直接從 URL 讀，不需要 useState
+  const filtered = posts.filter(p => p.title.includes(q))
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <SearchBar defaultValue={q} />     {/* 只有這個是 Client */}
+    </Suspense>
+  )
+}
+```
+
+> Day 2 的寫法沒有錯，適合不需要分享連結的互動場景。Day 3 是更貼近 Next.js 設計理念的做法，適合搜尋、篩選、分頁等需要保留狀態的功能。
 
 ### 4. useRouter vs Link vs redirect
 
@@ -1148,11 +1275,214 @@ import { redirect } from 'next/navigation'
 if (!session) redirect('/login')
 ```
 
+#### 三者差異與使用情境
+
+**核心判斷邏輯：**
+
+```
+導航發生在 JSX 裡？          → Link
+導航發生在事件 / 邏輯裡？     → useRouter（只能在 Client Component）
+導航發生在伺服器邏輯裡？      → redirect（只能在 Server Component / API Route）
+```
+
+---
+
+**Link — 宣告式導航，寫在 JSX 中**
+
+最常用的方式。只要是「點了這個東西就去某個頁面」，都用 Link。
+
+```tsx
+// ✅ 適合：導覽列、文章標題、按鈕連結
+<Link href="/blog">文章列表</Link>
+<Link href={`/blog/${post.slug}`}>閱讀更多</Link>
+
+// 帶 query string（篩選、分頁）
+<Link href={{ pathname: '/blog', query: { tag: 'nextjs' } }}>
+  Next.js 文章
+</Link>
+
+// prefetch 行為：滑鼠 hover 時就預先載入目標頁面
+// → 點下去幾乎是瞬間完成，這是 Link 最大的優勢
+// 如果不想要 prefetch（例如很少用到的頁面）：
+<Link href="/about" prefetch={false}>關於</Link>
+```
+
+> 原生 `<a href="...">` 會讓整個頁面重新載入（像傳統網站），Link 是 SPA 導航，只更新有變化的部分。
+
+---
+
+**useRouter — 命令式導航，用在事件處理邏輯中**
+
+當導航需要「先做某件事，再跳轉」時使用。只能在 Client Component。
+
+```tsx
+'use client'
+import { useRouter } from 'next/navigation'
+
+function LoginForm() {
+  const router = useRouter()
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const result = await login(formData)   // 先打 API
+
+    if (result.success) {
+      router.push('/dashboard')    // 成功才跳轉
+    } else {
+      setError('帳號或密碼錯誤')   // 失敗就顯示錯誤，不跳轉
+    }
+  }
+}
+```
+
+`push` vs `replace` 的差異：
+
+```
+router.push('/dashboard')
+  → 瀏覽器歷史：/login → /dashboard
+  → 使用者可以按上一頁回到 /login
+
+router.replace('/dashboard')
+  → 瀏覽器歷史：/dashboard（/login 被取代掉了）
+  → 使用者按上一頁，不會回到 /login
+  → 適合：登入成功後，不希望使用者按上一頁回到登入頁
+```
+
+```tsx
+router.push('/dashboard')   // 登入成功後導向儀表板
+router.replace('/login')    // 登出後導向登入頁（不留歷史）
+router.back()               // 「返回」按鈕
+router.refresh()            // 表單送出後刷新 Server Component 資料
+                            // （不重整整頁，只重新執行 Server Component）
+```
+
+---
+
+**redirect — 在伺服器端強制導向**
+
+在伺服器執行時（Server Component、API Route、Server Action）使用。最常見用途是「沒登入就踢回登入頁」。
+
+```tsx
+// app/dashboard/page.tsx（Server Component）
+import { redirect } from 'next/navigation'
+import { getSession } from '@/lib/auth'
+
+export default async function DashboardPage() {
+  const session = await getSession()
+
+  if (!session) {
+    redirect('/login')   // 在伺服器端直接導向，瀏覽器不會看到 dashboard 的任何內容
+  }
+
+  return <div>歡迎，{session.user.name}</div>
+}
+```
+
+`redirect` 會立即終止函式執行，後面的程式碼不會跑到，效果類似 `throw`。
+
+---
+
+**一句話記憶法：**
+
+| | 一句話 | 執行環境 |
+|---|---|---|
+| `Link` | 「點這裡去那裡」— 寫在 JSX，最常用 | Client + Server 皆可 |
+| `useRouter` | 「做完這件事再去那裡」— 需要先跑非同步邏輯 | Client Component 限定 |
+| `redirect` | 「你不能來這裡，去那裡」— 權限保護 | Server Component 限定 |
+
+---
+
+**常見誤用：**
+
+```tsx
+// ❌ 在 Server Component 用 useRouter（Server Component 不能用 hooks）
+export default async function Page() {
+  const router = useRouter()  // 錯誤！
+}
+
+// ❌ 在 Client Component 用 redirect
+'use client'
+import { redirect } from 'next/navigation'
+function Page() {
+  redirect('/login')  // 錯誤！Client Component 請改用 router.replace('/login')
+}
+
+// ❌ 用 Link 做「送出表單後導向」（無法等待非同步邏輯）
+<Link href="/dashboard" onClick={submitForm}>送出</Link>  // submitForm 是 async，Link 不會等它完成
+
+// ✅ 改用 button + useRouter
+<button onClick={async () => {
+  await submitForm()
+  router.push('/dashboard')
+}}>送出</button>
+```
+
 ### 5. 路由群組與特殊 Layout
+
+#### 先理解問題：Layout 的繼承機制
+
+Next.js 的 layout 是**層層套疊**的。每個資料夾的 `layout.tsx` 會包住該資料夾內所有頁面：
+
+```
+app/
+├── layout.tsx          ← 全站 layout（Navbar + Footer，所有頁面都套用）
+├── page.tsx            ← 首頁，套用全站 layout
+├── blog/
+│   ├── layout.tsx      ← blog layout（只有 /blog 底下的頁面套用）
+│   └── page.tsx        ← /blog 頁面，套用 blog layout + 全站 layout
+└── login/
+    └── page.tsx        ← /login 頁面，也套用全站 layout（有 Navbar）
+```
+
+**問題來了：** 登入頁通常不需要 Navbar 和 Footer，但它在 `app/` 下，會自動繼承全站 layout。如果要讓登入頁用不同的外框，直接建資料夾的話，URL 就會變成 `/auth/login`，不是我們要的 `/login`。
+
+---
+
+#### 路由群組（Route Groups）
+
+路由群組用括號命名資料夾：`(auth)`、`(blog)`。**括號內的名稱不會出現在 URL 中**，只是用來在程式碼裡做分組。
+
+```
+app/
+├── layout.tsx                    ← 全站 layout
+├── (auth)/
+│   ├── layout.tsx                ← auth 專屬 layout（只有登入相關頁面套用）
+│   ├── login/
+│   │   └── page.tsx              ← URL：/login（不含 auth）
+│   └── register/
+│       └── page.tsx              ← URL：/register（不含 auth）
+├── (blog)/
+│   └── blog/
+│       └── page.tsx              ← URL：/blog
+└── (dashboard)/
+    └── dashboard/
+        └── page.tsx              ← URL：/dashboard
+```
+
+URL 完全不受資料夾分組影響，但每個群組可以有自己的 `layout.tsx`。
+
+---
+
+#### 用途 1：不同頁面套用不同的視覺外框
+
+這個部落格有三種截然不同的頁面外觀：
+
+```
+一般頁面（/blog、/about）
+  → 有 Navbar + Footer，內容置中，最大寬度 4xl
+
+登入 / 註冊頁（/login、/register）
+  → 沒有 Navbar，背景是漸層色，內容垂直置中（像彈窗卡片）
+
+儀表板（/dashboard）
+  → 有側欄選單，全寬版面，無 Footer
+```
+
+用路由群組就能讓每種頁面套用自己的 layout，而不互相干擾：
 
 ```tsx
 // app/(auth)/layout.tsx
-// 只有 /login, /register 等 auth 頁面會套用這個 layout
+// 只有 /login, /register 套用這個 layout（沒有 Navbar）
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -1162,7 +1492,91 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     </div>
   )
 }
+
+// app/(dashboard)/layout.tsx
+// 只有 /dashboard 套用這個 layout（有側欄）
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-screen">
+      <aside className="w-64 bg-gray-900 text-white p-6">
+        {/* 側欄選單 */}
+      </aside>
+      <main className="flex-1 p-8">
+        {children}
+      </main>
+    </div>
+  )
+}
 ```
+
+---
+
+#### 用途 2：整理程式碼結構，不影響 URL
+
+即使不需要特殊 layout，路由群組也能讓 `app/` 資料夾更有組織：
+
+```
+❌ 沒有分組（所有頁面全部丟在 app/ 下，一眼看不出關係）
+app/
+├── login/
+├── register/
+├── blog/
+├── dashboard/
+├── settings/
+├── profile/
+└── ...
+
+✅ 用路由群組分類（結構一目了然）
+app/
+├── (auth)/          ← 會員相關
+│   ├── login/
+│   └── register/
+├── (blog)/          ← 部落格相關
+│   ├── blog/
+│   └── blog/[slug]/
+└── (app)/           ← 需要登入才能用的功能
+    ├── dashboard/
+    ├── settings/
+    └── profile/
+```
+
+---
+
+#### Layout 的套疊順序（重要）
+
+以 `/login` 為例，實際渲染結果是這樣：
+
+```
+app/layout.tsx（全站：<html><body>）
+  └── app/(auth)/layout.tsx（auth：漸層背景 + 置中卡片）
+        └── app/(auth)/login/page.tsx（登入表單內容）
+```
+
+但**全站 layout 裡有 Navbar**，這樣登入頁不就也有 Navbar 了嗎？
+
+解法：把全站 layout 的 Navbar 也移到一個群組裡：
+
+```tsx
+app/
+├── layout.tsx               ← 只放 <html><body>，不放 Navbar
+├── (main)/
+│   ├── layout.tsx           ← 這裡放 Navbar + Footer
+│   ├── page.tsx             ← 首頁
+│   ├── blog/
+│   └── about/
+└── (auth)/
+    ├── layout.tsx           ← 漸層背景，無 Navbar
+    ├── login/
+    └── register/
+```
+
+這樣 `(main)` 群組的頁面有 Navbar，`(auth)` 群組的頁面沒有 Navbar，兩者互不干擾。
+
+---
+
+#### 一句話記憶
+
+> **路由群組 = 只影響程式碼結構，不影響 URL。** 括號裡的名稱對使用者完全不可見，是給開發者用來整理檔案和隔離 layout 的工具。
 
 ## 🛠️ 手把手實作
 
