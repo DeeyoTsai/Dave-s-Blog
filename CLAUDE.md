@@ -45,9 +45,28 @@
 - `SKD/Day2-筆記-進階Hooks與TypeScript.md`
 - `SKD/Day2-練習挑戰.md`
 
+### 📖 Day 3 複習中（2026-04-20）
+**複習內容（尚未實作）：**
+- App Router 完整路由模式（動態路由、路由群組）
+- `generateStaticParams` — Build 時預先產生靜態頁面
+- URL SearchParams 搜尋（Server Component 取代 useState）
+- `Suspense` — 解決 Hydration Mismatch，三種常見使用情境
+- Day 2 `useState` 搜尋 vs Day 3 URL SearchParams 差異
+- `Link` / `useRouter` / `redirect` 三者差異與使用情境
+- 路由群組 `(group)` 與特殊 Layout 隔離
+
+**下一步：** 開始 Day 3 實作練習挑戰
+
 ---
 
 ## 最近異動
+
+**2026-04-20**
+- Day 3 教材複習（`SKD/Next.js-深度學習計劃-Day1-3.md`）
+- 補充 Suspense 完整解析（含三種使用情境、Hydration Mismatch 說明）
+- 補充 Day 2 vs Day 3 搜尋寫法對比（情境說明 + 程式碼並排）
+- 補充 `Link` / `useRouter` / `redirect` 差異、使用情境、常見誤用
+- 補充路由群組 `(group)` 概念、Layout 套疊順序、實際應用場景
 
 **2026-04-15**
 - Navbar 加入手機版漢堡選單（useState 練習）
@@ -71,11 +90,10 @@
 
 ## 下一步計劃
 
-### Day 3 預計內容
-- [ ] API Routes 實作
-- [ ] 資料庫整合（Prisma）
-- [ ] CRUD 操作實作
-- [ ] 表單驗證
+### Day 3 進行中
+- [ ] 練習 1：文章列表加入標籤篩選按鈕列
+- [ ] 練習 2：分頁元件 `Pagination.tsx`（`?page=N`）
+- [ ] 練習 3：`app/(blog)/blog/[slug]/page.tsx` + `generateMetadata` + `generateStaticParams`
 
 ---
 
