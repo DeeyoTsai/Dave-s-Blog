@@ -7,7 +7,7 @@
 - 建立基本路由結構
 - 完成所有 Day 1 練習挑戰
 
-### 🔄 Day 2 進行中（2026-04-15）
+### ✅ Day 2 完成（2026-04-17）
 **學習內容：**
 - Props 與 Interface 深度解析
 - 物件 State 管理
@@ -36,8 +36,8 @@
 
 **練習挑戰進度：**
 - ✅ 練習 1：useState — Navbar 手機選單開關
-- 🔄 練習 2：useMemo — 文章標籤篩選（進行中）
-- ⏳ 練習 3：useCallback — 搜尋輸入元件
+- ✅ 練習 2：useMemo — 文章標籤篩選
+- ✅ 練習 3：useCallback — 搜尋輸入元件
 
 **學習筆記：**
 - `SKD/Day2-筆記-Props與State.md`

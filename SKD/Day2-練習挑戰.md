@@ -113,16 +113,17 @@ post.tags.some(tag => tag.name === selectedTag)
 - 修改 `app/blog/page.tsx`
 
 **完成條件：**
-- 建立 `SearchInput` 元件，用 `React.memo` 包住
-- 從父元件傳入 `value` 和 `onChange` handler
-- `onChange` 用 `useCallback` 包住，避免子元件不必要的重新渲染
-- 在 `SearchInput` 裡加 `console.log`，觀察有無 `useCallback` 的渲染次數差異
+- ✅ 建立 `SearchInput` 元件，用 `React.memo` 包住
+- ✅ 從父元件傳入 `value` 和 `onChange` handler
+- ✅ `onChange` 用 `useCallback` 包住，避免子元件不必要的重新渲染
+- ✅ 在 `SearchInput` 裡加 `console.log`，觀察有無 `useCallback` 的渲染次數差異
 
 **關鍵觀念：**
 - React 每次渲染都會重建函式物件，參考位址不同
 - `memo` 用參考相等（`===`）比較 props，函式每次都是新的 → memo 失效
 - `useCallback` 讓函式在依賴不變時維持同一個參考 → memo 生效
-- 依賴陣列：handler 裡有用到外部變數就要列，沒有就填 `[]`
+- 依賴陣列規則：函式內有「讀取」哪個外部變數就放哪個；只是「呼叫」setter 不需要列入
+- `setXxx` 這類 state setter，React 保證參考永遠穩定，不需要放進依賴陣列
 
 **SearchInput Props 設計：**
 ```tsx
@@ -132,15 +133,32 @@ interface SearchInputProps {
 }
 ```
 
-**整合到 blog/page.tsx 後的最終效果：**
+**useCallback 寫法：**
+```tsx
+const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  setSearchTerm(e.target.value)  // 只呼叫 setter，沒有讀取外部變數
+}, [])                           // 所以依賴陣列為空
 ```
-[ 搜尋框 ]
-[ 全部 ] [ Next.js ] [ TypeScript ] [ React ] [ CSS ]
 
-┌──────────────────────────┐
-│ Next.js App Router 指南   │
-└──────────────────────────┘
+**useMemo 同時過濾兩個條件：**
+```tsx
+const filteredPosts = useMemo(() => {
+  return MOCK_POSTS.filter(post => {
+    const matchTitle = !searchTerm || post.title.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchTag = selectedTag ? post.tags.some(tag => tag.name === selectedTag) : true
+    return matchTitle && matchTag
+  })
+}, [selectedTag, searchTerm])
 ```
+
+**觀察結果：**
+- 點標籤 → `BlogPage` 重新渲染，但 `SearchInput` **不會**印出 log（memo 生效）
+- 輸入文字 → `value` prop 改變，`SearchInput` **會**印出 log（props 有變）
+- 若拿掉 `useCallback` → 點標籤時 `handleSearch` 每次都是新函式 → memo 失效 → `SearchInput` 也會重新渲染
+
+**React.memo 使用時機：**
+- 不是每個元件都需要，先不用，等發現效能問題再加
+- 適合：渲染成本高、或父元件頻繁渲染但子元件 props 幾乎不變的情境
 
 ---
 
@@ -149,5 +167,5 @@ interface SearchInputProps {
 | 練習 | 檔案 | 狀態 |
 |------|------|------|
 | useState — 手機選單 | `components/layout/Navbar.tsx` | ✅ 完成 |
-| useMemo — 標籤篩選 | `app/blog/page.tsx` | 🔄 實作完成，除錯中 |
-| useCallback — 搜尋元件 | `components/ui/SearchInput.tsx` | ⏳ 待開始 |
+| useMemo — 標籤篩選 | `app/blog/page.tsx` | ✅ 完成 |
+| useCallback — 搜尋元件 | `components/ui/SearchInput.tsx` | ✅ 完成 |

@@ -1,6 +1,7 @@
 'use client'
-import { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import PostCard from "@/components/blog/PostCard";
+import SearchInput from "@/components/ui/SearchInput";
 
 const MOCK_POSTS = [
     { id: '1', title: 'Next.js App Router 完全指南', slug:                
@@ -26,15 +27,31 @@ const MOCK_POSTS = [
 export default function BlogPage() {
   // return <h1 className="p-8 text-3xl font-bold">文章列表 (施工中) </h1>;
   const [selectedTag, setSelectedTag] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => { 
+    setSearchTerm(e.target.value);
+  },[])
+
   const filteredPosts = useMemo(()=>{
-    return MOCK_POSTS.filter(post => selectedTag ? post.tags.some(tag => tag.name === selectedTag) : true);
-  },[selectedTag]);
+    return MOCK_POSTS.filter(post => {
+      // const matchTitle = searchTerm === '' ? true : post.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchTitle = !searchTerm || post.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchTag = selectedTag ? post.tags.some(tag => tag.name === selectedTag) : true;
+      return matchTitle && matchTag
+    })
+  },[selectedTag, searchTerm]);
 
   return (
     <div>
       <h1>文章列表</h1>
       {/* 標籤篩選按鈕 */}
       <div className="flex gap-2 mb-6">
+        {/* 文字篩選輸入列 */}
+        <SearchInput
+          value={searchTerm}
+          onChange={handleSearch}
+        />
         {/* 「全部」按鈕 */}
         <button onClick={() => {
           console.log("點到全部了")
