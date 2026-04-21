@@ -19,7 +19,10 @@
   - Layout 繼承機制與問題說明
   - 兩種用途：隔離視覺外框 / 整理程式碼結構
   - Layout 套疊順序與 Navbar 隔離解法
--手把手進度至Step3完成
+- 完成手把手實作 Step 4：Loading 與 Error 頁面
+  - 新增 `app/(blog)/blog/loading.tsx`（骨架屏動畫）
+  - 新增 `app/(blog)/blog/error.tsx`（錯誤邊界頁面，含重試按鈕）
+
 ---
 
 ## 2026-04-17
