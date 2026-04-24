@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import PostCard from "@/components/blog/PostCard";
 import SearchBar from "@/components/blog/SearchBar";
+import TagFilter from "@/components/blog/TagFilter";
+
 
 // 暫時使用假資料（Day 6 換成 Prisma）
 const mockPosts = [
@@ -30,7 +32,7 @@ interface Props {
 
 export default async function BlogPage({ searchParams }: Props) {
   const { q = '', tag } = await searchParams
-  
+
   // 本地篩選(Day 6 後換成資料庫查詢)
   const filtered = mockPosts.filter(post => {
     const matchesQuery = !q || 
@@ -41,6 +43,28 @@ export default async function BlogPage({ searchParams }: Props) {
     
     return matchesQuery && matchesTag
   })
+
+  // const allTags = () => {
+  //   const tagSet = new Set<string>();
+  //   mockPosts.map(e => {
+  //     const tagObjects = [...e.tags]
+  //     tagObjects.map(obj=> tagSet.add(obj.name))
+  //   })
+  //   return [...tagSet]
+  // }
+  const allTags = [...new Set<string>(
+    mockPosts.flatMap(post => post.tags.map(t => t.name))
+  )]
+  // Day 3：練習2...
+  // const POSTS_PER_PAGE = 2 // 每頁幾篇（測試用，資料少先設 2）
+  // // 1. 從 searchParams 取出 page，預設第 1 頁                                  
+  // const page = ...                                                              
+                                                                                
+  // // 2. 計算總頁數                                                              
+  // const totalPages = ...
+                                                                                
+  // // 3. 切出當頁資料（從 filtered 切）
+  // const paginatedPosts = filtered.slice()
 
   return (
     <div>
@@ -53,6 +77,11 @@ export default async function BlogPage({ searchParams }: Props) {
       <Suspense fallback={<div className="h-12 bg-gray-100 rounded-xl animate-pulse mb-8"/>}>
         <SearchBar defaultValue={q}/>
       </Suspense>
+
+      <Suspense fallback={<div className="h-8 bg-gray-100 rounded animate-pulse mb-4"/>}>
+        <TagFilter tags={allTags} currentTag={tag}/>
+      </Suspense>
+      
       
       {filtered.length > 0 ? (
         <div className="grid gap-6">

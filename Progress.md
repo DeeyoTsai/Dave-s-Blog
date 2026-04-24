@@ -1,5 +1,22 @@
 # 修改記錄
 
+## 2026-04-22
+
+**Day 3 練習 1 完成：標籤篩選按鈕列（URL SearchParams）**
+
+- 新增 `components/blog/TagFilter.tsx`（Client Component）
+  - 用 `useSearchParams()` 讀取目前 URL 參數
+  - 點擊標籤時用 `router.push()` 更新 URL，保留 `q` 參數
+  - 點「全部」時用 `q_params.delete('tag')` 清除標籤篩選
+  - 使用 `components/ui/Button.tsx`，active 狀態用 `variant="primary"`，未選用 `variant="ghost"`
+  - 容器加 `flex flex-wrap gap-2` 讓按鈕自動換行
+- 修改 `app/(blog)/blog/page.tsx`
+  - 用 `flatMap + Set` 收集所有不重複標籤
+  - 用 `<Suspense>` 包住 `TagFilter`，傳入 `tags` 與 `currentTag`
+- 除錯記錄：透過 IP 存取 dev server 時 Client Component 無法 hydrate，改用 `localhost:3000` 正常
+
+---
+
 ## 2026-04-20
 
 **Day 3 教材複習 + 筆記補充**
