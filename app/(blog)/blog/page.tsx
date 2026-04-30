@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import PostCard from "@/components/blog/PostCard";
 import SearchBar from "@/components/blog/SearchBar";
 import TagFilter from "@/components/blog/TagFilter";
+import Pagination from "@/components/ui/Pagination";
 
 // 暫時使用假資料（Day 6 換成 Prisma）
 const mockPosts = [
@@ -74,7 +75,7 @@ export default async function BlogPage({ searchParams }: Props) {
     ),
   ];
   // Day 3：練習2...
-  const POSTS_PER_PAGE = 2; // 每頁幾篇（測試用，資料少先設 2）
+  const POSTS_PER_PAGE = 1; // 每頁幾篇（測試用，資料少先設 1）
   // // 1. 從 searchParams 取出 page，預設第 1 頁
   const currentPage = Number(page) || 1;
   // // 2. 計算總頁數
@@ -110,13 +111,15 @@ export default async function BlogPage({ searchParams }: Props) {
       </Suspense>
 
       {filtered.length > 0 ? (
-        <div className="grid gap-6">
-          {/* {filtered.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))} */}
-          {paginatedPosts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
+        <div>
+          <div className="grid gap-6">
+            {paginatedPosts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </div>
+          <Suspense fallback={<div className="h-10 bg-gray-100 rounded animate-pulse mt-8" />}>
+            <Pagination currentPage={currentPage} totalPages={totalPages} />
+          </Suspense>
         </div>
       ) : (
         <div className="text-center py-20">

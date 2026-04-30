@@ -1,5 +1,27 @@
 # 修改記錄
 
+## 2026-04-30
+
+**Day 3 練習 2 完成：分頁元件 Pagination（?page=N URL SearchParams）**
+
+- 新增 `components/ui/Pagination.tsx`（Client Component）
+  - `useSearchParams()` 讀取目前 URL 參數，保留 `q`、`tag` 同時切換頁碼
+  - `router.push()` 更新 URL，保留其他篩選條件
+  - 動態產生頁碼按鈕（`Array.from`），當前頁用 `variant="primary"`
+  - 上/下一頁按鈕依邊界條件自動 `disabled`
+- 修改 `app/(blog)/blog/page.tsx`
+  - 加入 `POSTS_PER_PAGE` 常數（測試設 1，正式設 2+）
+  - 計算 `totalPages`、`currentPage`，切出 `paginatedPosts`
+  - 用 `<Suspense>` 包住 `<Pagination>`，避免 Hydration Mismatch
+  - `<Pagination>` 放在 grid 外層，正確顯示在文章列表下方
+- 環境問題排除記錄
+  - Ubuntu code-server 透過 proxy URL 需設 `ASSET_PREFIX`（`.env.local` 設定）
+  - iPad Safari 無法執行 Turbopack dev 輸出 → 改用 `npm run build && npm run start`
+  - 新增 `package.json` `preview` script：`npm run build && npm run start`
+- 移除 `app/layout.tsx` 中臨時除錯用的 `window.onerror` script
+
+---
+
 ## 2026-04-22
 
 **Day 3 練習 1 完成：標籤篩選按鈕列（URL SearchParams）**
