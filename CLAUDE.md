@@ -45,8 +45,8 @@
 - `SKD/Day2-筆記-進階Hooks與TypeScript.md`
 - `SKD/Day2-練習挑戰.md`
 
-### 📖 Day 3 複習中（2026-04-20）
-**複習內容（尚未實作）：**
+### ✅ Day 3 完成（2026-05-02）
+**學習內容：**
 - App Router 完整路由模式（動態路由、路由群組）
 - `generateStaticParams` — Build 時預先產生靜態頁面
 - URL SearchParams 搜尋（Server Component 取代 useState）
@@ -55,11 +55,20 @@
 - `Link` / `useRouter` / `redirect` 三者差異與使用情境
 - 路由群組 `(group)` 與特殊 Layout 隔離
 
-**下一步：** 開始 Day 3 實作練習挑戰
+**練習挑戰進度：**
+- ✅ 練習 1：標籤篩選按鈕列（URL SearchParams）
+- ✅ 練習 2：分頁元件 `Pagination.tsx`（`?page=N`）
+- ✅ 練習 3：`app/(blog)/blog/[slug]/page.tsx` + `generateMetadata` + `generateStaticParams`
 
 ---
 
 ## 最近異動
+
+**2026-05-02**
+- Day 3 練習 3 完成：動態路由文章詳情頁
+- 新增 `lib/mockData.ts`（共用假資料）
+- 新增 `app/(blog)/blog/[slug]/page.tsx`（含 `generateStaticParams`、`generateMetadata`）
+- `.claude/CLAUDE.md` 補充 iPad + ngrok 開發流程
 
 **2026-04-20**
 - Day 3 教材複習（`SKD/Next.js-深度學習計劃-Day1-3.md`）
@@ -90,10 +99,8 @@
 
 ## 下一步計劃
 
-### Day 3 進行中
-- [ ] 練習 1：文章列表加入標籤篩選按鈕列
-- [ ] 練習 2：分頁元件 `Pagination.tsx`（`?page=N`）
-- [ ] 練習 3：`app/(blog)/blog/[slug]/page.tsx` + `generateMetadata` + `generateStaticParams`
+### Day 4 待開始
+- [ ] 待規劃
 
 ---
 

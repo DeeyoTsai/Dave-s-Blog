@@ -1,5 +1,23 @@
 # 修改記錄
 
+## 2026-05-02
+
+**Day 3 練習 3 完成：動態路由文章詳情頁（`generateStaticParams` + `generateMetadata`）**
+
+- 新增 `lib/mockData.ts`
+  - 將 `mockPosts` 從 `app/(blog)/blog/page.tsx` 抽離為共用模組
+  - 補充兩篇假文章的 `content` 欄位，供詳情頁顯示使用
+- 新增 `app/(blog)/blog/[slug]/page.tsx`
+  - `generateStaticParams`：回傳所有 slug，Build 時預先產生靜態頁面
+  - `generateMetadata`：動態設定每篇文章的 `<title>` 與 `<meta description>`
+  - 頁面元件：`await params` 取得 slug → `mockPosts.find()` 查詢文章 → 找不到呼叫 `notFound()`
+  - 顯示文章標題、作者、日期（`toLocaleDateString("zh-TW")`）、標籤（`map` 出 `<span>`）、內容
+- 修改 `app/(blog)/blog/page.tsx`：改用 `import { mockPosts } from "@/lib/mockData"`
+- 補充 `.claude/CLAUDE.md`：加入 iPad + ngrok 開發啟動流程說明
+- 補充 `SKD/Next.js-深度學習計劃-Day1-3.md`：新增 `params` vs `generateStaticParams` 常見混淆點說明（含對照表與圖解）
+
+---
+
 ## 2026-04-30
 
 **Day 3 練習 2 完成：分頁元件 Pagination（?page=N URL SearchParams）**

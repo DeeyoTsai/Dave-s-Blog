@@ -912,6 +912,50 @@ npm run build 時
 
 `generateStaticParams` 就是告訴 Next.js：**「Build 的時候，幫我預先產生這些頁面」**
 
+#### `params` 與 `generateStaticParams` 的差異（常見混淆點）
+
+很多人第一次看到這兩個東西會以為有關聯，其實是完全不同的機制：
+
+| | `params`（頁面 props） | `generateStaticParams` |
+|---|---|---|
+| 時機 | 使用者開啟頁面時（runtime） | `npm run build` 時（build time） |
+| 用途 | 拿到當前 URL 的動態值 | 告訴 Next.js 要預先產生哪些頁面 |
+| 誰呼叫 | Next.js 自動傳入頁面元件 | Next.js build 自動呼叫 |
+
+**`params` 是從哪裡來的？**
+
+當使用者瀏覽 `/blog/nextjs-app-router`，Next.js 看到資料夾叫 `[slug]`，就自動把 URL 對應的值包成物件傳給頁面：
+
+```
+URL: /blog/nextjs-app-router
+                 ↓
+params = { slug: "nextjs-app-router" }   ← Next.js 自動傳入，不需要手動 call
+```
+
+```tsx
+// Next.js 15：params 是 Promise，要用 await 取出
+export default async function BlogPostPage({ params }: Props) {
+  const { slug } = await params   // 拿到當前頁面的 slug
+  const post = mockPosts.find(p => p.slug === slug)
+  if (!post) notFound()           // 找不到就顯示 404
+}
+```
+
+**`generateStaticParams` 是做什麼的？**
+
+它在 build 時告訴 Next.js 有哪些合法 slug，讓 Next.js 預先產生對應的靜態 HTML：
+
+```
+generateStaticParams 回傳：
+[{ slug: "nextjs-app-router" }, { slug: "typescript-tips" }]
+           ↓
+Build 時 Next.js 預先產生：
+  /blog/nextjs-app-router  → 靜態 HTML ✅
+  /blog/typescript-tips    → 靜態 HTML ✅
+```
+
+兩個都是由 Next.js 框架負責呼叫，你不需要手動執行它們。
+
 #### 動態路由的問題
 
 ```

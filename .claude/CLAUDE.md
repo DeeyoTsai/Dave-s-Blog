@@ -41,10 +41,23 @@ npm run dev
 
 > 編輯 `~/dev/my-blog` 內的檔案會直接同步到 Windows 原始資料夾（symlink 雙向同步）。
 
+### iPad 開發（透過 ngrok 對外）
+在 iPad 上透過瀏覽器開發時，需要用 ngrok 將 port 3000 暴露到公開網址。
+
+**啟動流程：**
+```bash
+npm run preview   # 或 npm run dev，先確認 port 3000 有在跑
+ngrok http 3000 &
+curl -s http://localhost:4040/api/tunnels | python3 -c "import sys,json; t=json.load(sys.stdin)['tunnels']; print(t[0]['public_url'])"
+```
+
+> 每次重啟 ngrok 網址都會不同（免費版），記得從 `http://localhost:4040` 取得最新網址。
+
 ### 每次對話開始時的環境確認（強制）
 1. 用 `uname -s` 確認作業系統（Linux = Ubuntu，其他 = Windows）
 2. 若為 Linux，確認是否在 `~/dev/my-blog` 路徑下操作
 3. 確認 `node_modules/.bin/next` 是否存在，不存在則提示重新安裝
+4. 若使用 iPad 開發，確認 ngrok 是否在跑（`curl -s http://localhost:4040/api/tunnels`），未啟動則執行上方流程
 
 ---
 
